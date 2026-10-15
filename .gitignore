@@ -1,0 +1,36 @@
+# Maven build output
+target/
+
+# IDE - IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# IDE - Eclipse / VS Code
+.classpath
+.project
+.settings/
+.vscode/
+
+# Compiled classes and archives
+*.class
+*.jar
+*.war
+*.ear
+
+# Test and analysis reports
+surefire-reports/
+jacoco.exec
+*.exec
+*.html
+
+# Logs
+*.log
+hs_err_pid*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
