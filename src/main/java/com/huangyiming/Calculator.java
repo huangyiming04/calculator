@@ -22,7 +22,7 @@ public class Calculator {
         double y = parse(b);
 
         return switch (op) {
-            case "+" -> x - y;
+            case "+" -> x + y;
             case "-" -> x - y;
             case "*" -> x * y;
             case "/" -> divide(x, y);
