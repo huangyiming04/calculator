@@ -1,17 +1,23 @@
+# Name shown in the Actions tab and next to the status badge.
 name: Java CI
 
+# Trigger: every push to any branch, and every pull request.
 on:
   push:
   pull_request:
 
 jobs:
   build:
+    # GitHub-hosted Linux runner.
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Download the repository into the runner workspace.
       - name: Check out the repository
         uses: actions/checkout@v4
 
+      # 2. Install the JDK the project targets and cache the Maven repository
+      #    so later runs do not download the dependencies again.
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -19,8 +25,10 @@ jobs:
           distribution: temurin
           cache: maven
 
+      # 3. Compile the main sources; a syntax or type error stops the run here.
       - name: Compile the sources
         run: mvn -B -ntp clean compile
 
+      # 4. Compile and run every JUnit 5 test; a failed assertion stops the run here.
       - name: Run the JUnit tests
         run: mvn -B -ntp test
