@@ -19,5 +19,8 @@ jobs:
           distribution: temurin
           cache: maven
 
-      - name: Build and run the tests
-        run: mvn -B -ntp clean test
+      - name: Compile the sources
+        run: mvn -B -ntp clean compile
+
+      - name: Run the JUnit tests
+        run: mvn -B -ntp test
