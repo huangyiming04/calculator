@@ -20,6 +20,16 @@ java -jar target/calculator-1.0.jar 2 + 2
 
 Supported operators are `+`, `-`, `*` and `/`.
 
+## Run in Docker
+
+The image is built in two stages: Maven compiles and tests the project, then
+only the runnable jar is copied into a small JRE image.
+
+```bash
+docker build -t calculator:v1 .
+docker run --rm calculator:v1 2 + 2
+```
+
 ## Tooling
 
 | Tool | Purpose | Command |

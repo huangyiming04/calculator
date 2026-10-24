@@ -64,6 +64,16 @@ class CalculatorTest {
         assertThrows(IllegalArgumentException.class, () -> calculator.eval("2", "%", "3"));
     }
 
+    // The command line hands over a freshly allocated string, never an
+    // interned literal. Without this test, a reference comparison in
+    // isSupportedOperator() stays green and only breaks outside the JVM
+    // that ran the tests - for example inside the Docker container.
+    @Test
+    void operatorBuiltAtRuntimeIsAccepted() {
+        String plus = new String("+");
+        assertEquals(4.0, calculator.eval("2", plus, "2"));
+    }
+
     @Test
     void nonNumericOperandIsRejected() {
         assertThrows(IllegalArgumentException.class, () -> calculator.eval("abc", "+", "2"));

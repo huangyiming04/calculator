@@ -31,7 +31,7 @@ public class Calculator {
     }
 
     private boolean isSupportedOperator(String op) {
-        return op == "+" || op == "-" || op == "*" || op == "/";
+        return "+".equals(op) || "-".equals(op) || "*".equals(op) || "/".equals(op);
     }
 
     private double divide(double x, double y) {

@@ -1,0 +1,8 @@
+# Keep the build context small and the image free of host-side artifacts.
+# target/ is rebuilt inside the image, so a stale local build must not leak in.
+target/
+.git/
+.idea/
+*.iml
+.github/
+README.md
