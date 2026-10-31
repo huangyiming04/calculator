@@ -42,6 +42,16 @@ RUN mvn -B -ntp clean package
 # of the deprecated "openjdk:17-jre-slim" tag.
 FROM eclipse-temurin:17-jre-jammy
 
+# The JRE image ships no HTTP client, and the compose health check has to
+# call /api/health from inside this container. curl also gives you a way to
+# probe the API while debugging:
+#   docker compose exec backend curl -s http://127.0.0.1:8000/api/health
+# --no-install-recommends keeps the package list minimal, and the apt lists
+# are removed in the same layer so they do not stay in the image.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # WORKDIR sets the application directory inside the final container.
 WORKDIR /app
 
@@ -50,10 +60,16 @@ WORKDIR /app
 # which is the whole point of a multi-stage build.
 COPY --from=build /app/target/calculator-*.jar app.jar
 
+# EXPOSE documents the port the process listens on. It does not publish
+# anything by itself; the host side is opened by `ports` in compose.
+EXPOSE 8000
+
 # ENTRYPOINT is the process started when the container runs. The exec
 # form (JSON array) passes arguments straight to the JVM without a
 # shell in between, and appends runtime arguments to it:
-#   docker run --rm calculator:v1 2 + 2   ->   java -jar app.jar 2 + 2
-# ENTRYPOINT is used instead of CMD because CMD would be replaced by
-# those arguments instead of receiving them.
+#   docker run --rm calculator-backend:lab7          -> starts the HTTP server
+#   docker run --rm calculator-backend:lab7 2 + 2    -> java -jar app.jar 2 + 2
+# The second form keeps the Lab 6 command-line usage working, which is why
+# ENTRYPOINT is used instead of CMD: CMD would be replaced by those
+# arguments instead of receiving them.
 ENTRYPOINT ["java", "-jar", "app.jar"]
