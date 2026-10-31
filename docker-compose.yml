@@ -1,0 +1,88 @@
+# Lab 7 - multi-container deployment.
+#
+# Compose reads this file, builds each image from its own Dockerfile, creates
+# one private network and starts both containers on it.
+#
+#   docker compose config      validate the file without running anything
+#   docker compose up -d       build (if needed), create and start
+#   docker compose ps          state and port mappings
+#   docker compose logs -f     follow both logs
+#   docker compose down        stop and remove containers and the network
+
+name: calculator-lab7
+
+services:
+
+  # ---------------------------------------------------------------- backend
+  backend:
+    # Built from ./backend/Dockerfile. That directory is also the build
+    # context, so the Dockerfile can only see files inside it.
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    image: calculator-backend:lab7
+
+    # host:container. Publishing 8000 lets curl reach the API directly from
+    # this machine, which is useful for telling a backend problem apart from
+    # a proxy problem.
+    ports:
+      - "8000:8000"
+
+    environment:
+      # Read by App. PORT must match the container side of the mapping above.
+      PORT: "8000"
+      # A value from the host wins: LOG_LEVEL=DEBUG docker compose up
+      LOG_LEVEL: "${LOG_LEVEL:-INFO}"
+
+    # Restart a failed process, but do not loop after a normal `compose down`.
+    restart: on-failure
+
+    # A started container is not a working service: the JVM needs a moment
+    # before it listens. This probe asks the application itself, so `web` can
+    # wait for real readiness instead of guessing.
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+    networks:
+      - calcnet
+
+  # -------------------------------------------------------------------- web
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+
+    image: calculator-web:lab7
+
+    # host 8080 -> the nginx inside the container, which still listens on 80.
+    ports:
+      - "8080:80"
+
+    # Wait until the backend is healthy, not merely created. Without this the
+    # first page load could fire /api/health while the JVM is still starting.
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    restart: on-failure
+
+    # BusyBox wget ships with the alpine image and needs no extra download.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+    networks:
+      - calcnet
+
+# One explicit bridge network. Both services join it, so Docker's internal DNS
+# answers "backend" with the backend container's current IP.
+networks:
+  calcnet:
+    driver: bridge

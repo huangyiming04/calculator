@@ -35,7 +35,7 @@ public class App {
     private static void startServer() {
         int port = configuredPort();
         try {
-            CalcServer server = new CalcServer(port);
+            CalcServer server = new CalcServer(port, System.getenv("LOG_LEVEL"));
             server.start();
             System.out.println("calculator backend listening on 0.0.0.0:" + server.port());
         } catch (IOException e) {

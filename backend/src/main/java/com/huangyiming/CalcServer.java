@@ -24,6 +24,7 @@ public final class CalcServer {
 
     private final HttpServer server;
     private final Calculator calculator = new Calculator();
+    private final boolean debug;
 
     /**
      * Binds the port and registers the routes, without starting the server.
@@ -32,12 +33,21 @@ public final class CalcServer {
      * it again.
      */
     public CalcServer(int port) throws IOException {
+        this(port, null);
+    }
+
+    /**
+     * @param logLevel DEBUG also logs the health probes, which are otherwise
+     *                 skipped so that the periodic checks do not flood the log.
+     */
+    public CalcServer(int port, String logLevel) throws IOException {
         // InetSocketAddress(port) listens on 0.0.0.0. Writing "127.0.0.1"
         // here would only accept connections from inside the container, and
         // Docker's port forwarding would never reach it.
         server = HttpServer.create(new InetSocketAddress(port), 0);
         server.createContext("/api/health", this::handleHealth);
         server.createContext("/api/calc", this::handleCalc);
+        this.debug = "DEBUG".equalsIgnoreCase(logLevel);
     }
 
     public void start() {
@@ -174,8 +184,9 @@ public final class CalcServer {
     private void sendJson(HttpExchange exchange, int status, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
 
-        // Health checks run every few seconds, so they would flood the log.
-        if (!"/api/health".equals(exchange.getRequestURI().getPath())) {
+        // Health checks run every few seconds, so they would flood the log
+        // unless DEBUG was requested.
+        if (debug || !"/api/health".equals(exchange.getRequestURI().getPath())) {
             System.out.println(exchange.getRequestMethod() + " "
                     + exchange.getRequestURI() + " -> " + status);
         }
