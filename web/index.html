@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Calculator · Lab 7</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="card">
+    <header class="head">
+      <div>
+        <h1>Calculator</h1>
+        <p class="sub">Java backend · nginx frontend</p>
+      </div>
+      <div id="status" class="status is-pending">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="status-text">checking backend…</span>
+      </div>
+    </header>
+
+    <section class="display" aria-live="polite">
+      <div id="expression" class="expression">0</div>
+      <div id="result" class="result"></div>
+    </section>
+
+    <section class="keys" aria-label="Keypad">
+      <button type="button" class="key fn" data-action="clear" style="grid-area: c">C</button>
+      <button type="button" class="key fn" data-action="back" style="grid-area: back" aria-label="Backspace">⌫</button>
+      <button type="button" class="key op" data-op="/" style="grid-area: div">÷</button>
+      <button type="button" class="key op" data-op="*" style="grid-area: mul">×</button>
+
+      <button type="button" class="key num" data-digit="7" style="grid-area: seven">7</button>
+      <button type="button" class="key num" data-digit="8" style="grid-area: eight">8</button>
+      <button type="button" class="key num" data-digit="9" style="grid-area: nine">9</button>
+      <button type="button" class="key op" data-op="-" style="grid-area: sub">−</button>
+
+      <button type="button" class="key num" data-digit="4" style="grid-area: four">4</button>
+      <button type="button" class="key num" data-digit="5" style="grid-area: five">5</button>
+      <button type="button" class="key num" data-digit="6" style="grid-area: six">6</button>
+      <button type="button" class="key op" data-op="+" style="grid-area: add">+</button>
+
+      <button type="button" class="key num" data-digit="1" style="grid-area: one">1</button>
+      <button type="button" class="key num" data-digit="2" style="grid-area: two">2</button>
+      <button type="button" class="key num" data-digit="3" style="grid-area: three">3</button>
+      <button type="button" class="key eq" data-action="equals" style="grid-area: eq" aria-label="Equals">=</button>
+
+      <button type="button" class="key num" data-digit="0" style="grid-area: zero">0</button>
+      <button type="button" class="key num" data-digit="." style="grid-area: dot">.</button>
+    </section>
+
+    <footer class="trace">
+      <div class="trace-row"><span>request</span><code id="trace-url">—</code></div>
+      <div class="trace-row"><span>response</span><code id="trace-response">—</code></div>
+    </footer>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -21,10 +21,11 @@ out/
 *.ear
 
 # Test and analysis reports
+# (coverage HTML lives under target/, which is ignored above; a blanket
+#  *.html rule would also hide the frontend page in web/)
 surefire-reports/
 jacoco.exec
 *.exec
-*.html
 
 # Logs
 *.log
