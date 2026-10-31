@@ -11,6 +11,12 @@ jobs:
     # GitHub-hosted Linux runner.
     runs-on: ubuntu-latest
 
+    # Since Lab 7 the Maven project lives in backend/, so every run step
+    # starts there. Actions such as checkout are unaffected.
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       # 1. Download the repository into the runner workspace.
       - name: Check out the repository
@@ -29,43 +35,104 @@ jobs:
       - name: Compile the sources
         run: mvn -B -ntp clean compile
 
-      # 4. Compile and run every JUnit 5 test; a failed assertion stops the run here.
+      # 4. Run every JUnit 5 test, including the HTTP-layer tests that start a
+      #    real server on a random port.
       - name: Run the JUnit tests
         run: mvn -B -ntp test
 
-  # 5. Container job: builds the image from the Dockerfile and proves that
-  #    the calculator still works inside it. It starts only after "build"
-  #    is green, so a broken test never produces a published image.
-  docker:
+  # New in Lab 7: prove that the compose file and both Dockerfiles are valid.
+  # The stack is started once and torn down again; nothing keeps running.
+  compose:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      # Change this if your Docker Hub account name differs from GitHub.
-      IMAGE_NAME: huangyiming04/calculator
 
     steps:
-      # 1. Dockerfile, pom.xml and src/ must be in the workspace.
+      # The compose file references ./backend and ./web, so the whole
+      # repository has to be present, not just one subdirectory.
       - name: Check out the repository
         uses: actions/checkout@v4
 
-      # 2. Same multi-stage build as on a laptop; the runner has Docker
-      #    preinstalled, so no setup step is needed.
-      - name: Build the Docker image
-        run: docker build -t "$IMAGE_NAME:lab6" .
+      # 1. Parse the YAML, resolve variables and check the schema. This
+      #    catches indentation mistakes and unknown fields in seconds,
+      #    before any image is built.
+      - name: Validate the compose file
+        run: docker compose config --quiet
 
-      # 3. Run the container like a user would. Exit code 1 (test fails)
-      #    marks the job red, which is the CI equivalent of the local run.
-      - name: Run the calculator inside the image
+      # 2. Build both images from their own Dockerfiles, exactly as on a
+      #    laptop. A broken Dockerfile or a wrong build context fails here.
+      - name: Build both images
+        run: docker compose build
+
+      # 3. Start the stack and wait until both health checks pass, so the
+      #    next step never races the JVM start-up.
+      - name: Start the stack
+        run: docker compose up -d --wait --wait-timeout 180
+
+      # 4. Call the API through nginx. This only succeeds if the containers
+      #    share a network and the service name resolves.
+      - name: Smoke test through the proxy
         run: |
-          result=$(docker run --rm "$IMAGE_NAME:lab6" 2 + 2)
+          curl -fsS http://127.0.0.1:8080/api/health
+          result=$(curl -fsS "http://127.0.0.1:8080/api/calc?a=2&op=%2B&b=3")
+          echo "2 + 3 = $result"
+          echo "$result" | grep -q '"result":5.0'
+
+      # 5. Always show what happened, even when a step above failed.
+      - name: Show container state
+        if: always()
+        run: docker compose ps
+
+      - name: Show the logs
+        if: always()
+        run: docker compose logs --no-color
+
+      # 6. Remove containers and the network. Images are kept for the push
+      #    job below, but that job runs in a fresh workspace anyway.
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v
+
+  # Publishing keeps the Lab 6 behaviour: only main pushes reach Docker Hub.
+  docker:
+    needs: compose
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: huangyiming04/calculator
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      # The backend is the service worth publishing; the web image only
+      # contains static files and a config that expects the compose network.
+      - name: Build the backend image
+        run: docker build -t "$IMAGE_NAME:lab7" ./backend
+
+      # The command-line mode must survive the move to an HTTP service.
+      - name: Run the command-line mode inside the image
+        run: |
+          result=$(docker run --rm "$IMAGE_NAME:lab7" 2 + 2)
           echo "2 + 2 = $result"
           test "$result" = "4.0"
 
-      # 4. Evidence for the Actions log.
-      - name: Show the built image
-        run: docker image ls "$IMAGE_NAME"
+      # And the service mode must answer on its own, without compose.
+      - name: Start the HTTP mode inside the image
+        run: |
+          docker run -d --name smoke -p 8000:8000 "$IMAGE_NAME:lab7"
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs smoke
+          exit 1
 
-      # 5. Publish only on main: pull requests build and test, merges ship.
+      - name: Stop the smoke container
+        if: always()
+        run: docker rm -f smoke || true
+
+      # Publish only on main: pull requests build and test, merges ship.
       - name: Log in to Docker Hub
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
@@ -75,4 +142,4 @@ jobs:
 
       - name: Push the image
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: docker push "$IMAGE_NAME:lab6"
+        run: docker push "$IMAGE_NAME:lab7"

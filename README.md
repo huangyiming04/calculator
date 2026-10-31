@@ -26,19 +26,43 @@ mvn clean test
 ```bash
 cd backend
 mvn package
-java -jar target/calculator-1.0.jar 2 + 2
+java -jar target/calculator-1.0.jar          # HTTP service on port 8000
+java -jar target/calculator-1.0.jar 2 + 2    # command-line mode
 ```
 
 Supported operators are `+`, `-`, `*` and `/`.
 
+### API
+
+| Request | Result |
+| --- | --- |
+| `GET /api/health` | `{"status":"ok"}` |
+| `GET /api/calc?a=2&op=%2B&b=3` | `{"a":"2","op":"+","b":"3","result":5.0}` |
+
+Missing or invalid input answers `400`, division by zero answers `422`.
+
 ## Run in Docker
 
-The image is built in two stages: Maven compiles and tests the project, then
-only the runnable jar is copied into a small JRE image.
+The backend image is built in two stages: Maven compiles and tests the project,
+then only the runnable jar is copied into a small JRE image.
 
 ```bash
-docker build -t calculator:v1 backend
-docker run --rm calculator:v1 2 + 2
+docker build -t calculator-backend:lab7 backend
+docker run --rm calculator-backend:lab7 2 + 2
+```
+
+## Run with Docker Compose
+
+`docker-compose.yml` starts both services on one private network. nginx serves
+the page on port 8080 and forwards `/api/` to the backend service by name, so
+the page never needs to know where the API lives.
+
+```bash
+docker compose up -d --build
+# open http://127.0.0.1:8080
+docker compose ps
+docker compose logs -f
+docker compose down
 ```
 
 ## Tooling
